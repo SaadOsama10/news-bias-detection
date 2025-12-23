@@ -17,6 +17,10 @@ KEYWORDS = [
 
 QUERY = "(" + " OR ".join([f'"{k}"' for k in KEYWORDS]) + ")"
 
+def contains_keywords(text):
+    t = (text or "").lower()
+    return any(k in t for k in KEYWORDS)
+
 def fetch_page(section, page, page_size=200):
     params = {
         "api-key": "test",
@@ -40,12 +44,12 @@ def clean_html(html):
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
-def collect_from_section(section, label, target, min_words=60, sleep_s=0.2):
+def collect_from_section(section, label, target, min_words=60, sleep_s=0.2, max_pages=400):
     collected = []
     used = set()
     page = 1
 
-    while len(collected) < target:
+    while len(collected) < target and page <= max_pages:
         j = fetch_page(section, page, page_size=200)
         if not j or "response" not in j:
             break
@@ -69,9 +73,11 @@ def collect_from_section(section, label, target, min_words=60, sleep_s=0.2):
             if len(text.split()) < min_words:
                 continue
 
+            if not (contains_keywords(title) or contains_keywords(text)):
+                continue
+
             collected.append({
                 "url": url,
-                "section": section,
                 "title": title,
                 "text": text,
                 "label": label
@@ -85,36 +91,47 @@ def collect_from_section(section, label, target, min_words=60, sleep_s=0.2):
         page += 1
         time.sleep(sleep_s)
 
-        if page > 200:
-            break
-
     return collected
 
 random.seed(42)
 
-target_per_class = 1000
+target_per_class = 2500
 
-neutral_sections = ["world", "middle-east"]
+neutral_sections = ["world", "middle-east", "us-news", "international"]
 biased_sections = ["commentisfree"]
 
 neutral = []
 for sec in neutral_sections:
     if len(neutral) >= target_per_class:
         break
-    neutral += collect_from_section(sec, "Neutral", target_per_class - len(neutral), min_words=60, sleep_s=0.15)
+    neutral += collect_from_section(
+        sec,
+        "Neutral",
+        target_per_class - len(neutral),
+        min_words=60,
+        sleep_s=0.2,
+        max_pages=500
+    )
 
 biased = []
 for sec in biased_sections:
     if len(biased) >= target_per_class:
         break
-    biased += collect_from_section(sec, "Biased", target_per_class - len(biased), min_words=60, sleep_s=0.15)
+    biased += collect_from_section(
+        sec,
+        "Biased",
+        target_per_class - len(biased),
+        min_words=60,
+        sleep_s=0.2,
+        max_pages=700
+    )
 
 if len(neutral) < target_per_class or len(biased) < target_per_class:
-    raise RuntimeError(f"Not enough collected. Neutral={len(neutral)} Biased={len(biased)}. Reduce min_words or add more sections.")
+    raise RuntimeError(f"Not enough collected. Neutral={len(neutral)} Biased={len(biased)}. Reduce min_words or add more sources/pages.")
 
 df = pd.DataFrame(neutral + biased).sample(frac=1, random_state=42)
-df.to_csv("guardian_israel_palestine_balanced_2000.csv", index=False, encoding="utf-8")
+df.to_csv("guardian_israel_palestine_balanced_5000.csv", index=False, encoding="utf-8")
 
 print(df["label"].value_counts())
-print("Saved: guardian_israel_palestine_balanced_2000.csv")
+print("Saved: guardian_israel_palestine_balanced_5000.csv")
 print(df.head(3))
