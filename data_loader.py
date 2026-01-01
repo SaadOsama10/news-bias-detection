@@ -73,12 +73,12 @@ def collect_from_section(section, label, target, min_words=60, sleep_s=0.2, max_
             if len(text.split()) < min_words:
                 continue
 
+            # Keep only conflict-related articles
             if not (contains_keywords(title) or contains_keywords(text)):
                 continue
 
+            # ✅ ONLY TWO COLUMNS: text + label
             collected.append({
-                "url": url,
-                "title": title,
                 "text": text,
                 "label": label
             })
@@ -127,11 +127,16 @@ for sec in biased_sections:
     )
 
 if len(neutral) < target_per_class or len(biased) < target_per_class:
-    raise RuntimeError(f"Not enough collected. Neutral={len(neutral)} Biased={len(biased)}. Reduce min_words or add more sources/pages.")
+    raise RuntimeError(
+        f"Not enough collected. Neutral={len(neutral)} Biased={len(biased)}. "
+        f"Reduce min_words or add more sources/pages."
+    )
 
-df = pd.DataFrame(neutral + biased).sample(frac=1, random_state=42)
-df.to_csv("guardian_israel_palestine_balanced_5000.csv", index=False, encoding="utf-8")
+df = pd.DataFrame(neutral + biased).sample(frac=1, random_state=42).reset_index(drop=True)
+
+out_file = "guardian_text.csv"
+df.to_csv(out_file, index=False, encoding="utf-8")
 
 print(df["label"].value_counts())
-print("Saved: guardian_israel_palestine_balanced_5000.csv")
+print("Saved:", out_file)
 print(df.head(3))
