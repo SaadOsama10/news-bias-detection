@@ -12,6 +12,11 @@ from sklearn.metrics import (
     roc_auc_score, roc_curve, ConfusionMatrixDisplay
 )
 
+DPI = 300
+CM_FILE = "LinearSVMConMatrix.png"
+ROC_FILE = "LinearSVMROC.png"
+LC_FILE = "LinearSVMLearningCurve.png"
+
 df = pd.read_csv("guardian_text.csv").dropna(subset=["text", "label"])
 X = df["text"].astype(str)
 y = df["label"].astype(str)
@@ -35,7 +40,7 @@ cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 param_grid = {
     "tfidf__max_features": [5000, 10000],
-    "tfidf__ngram_range": [(1,1), (1,2)],
+    "tfidf__ngram_range": [(1, 1), (1, 2)],
     "svm__C": [0.1, 1, 3, 10]
 }
 
@@ -65,7 +70,10 @@ print("\nConfusion Matrix:\n", cm)
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
 disp.plot(values_format="d")
 plt.title("Confusion Matrix - Linear SVM (TF-IDF)")
-plt.show()
+plt.tight_layout()
+plt.savefig(CM_FILE, dpi=DPI)
+plt.close()
+print(f"Saved: {CM_FILE}")
 
 scores = best_model.decision_function(X_test)
 y_test_bin = (y_test == pos_label).astype(int)
@@ -78,7 +86,10 @@ plt.plot(fpr, tpr)
 plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
 plt.title(f"ROC Curve - Linear SVM (AUC = {auc:.3f})")
-plt.show()
+plt.tight_layout()
+plt.savefig(ROC_FILE, dpi=DPI)
+plt.close()
+print(f"Saved: {ROC_FILE}")
 
 print("\nROC-AUC:", auc, "| Positive label:", pos_label)
 
@@ -108,7 +119,10 @@ plt.xlabel("Training set size")
 plt.ylabel("Error (1 - F1-macro)")
 plt.title("Learning Curve (Error) - Linear SVM (TF-IDF)")
 plt.legend()
-plt.show()
+plt.tight_layout()
+plt.savefig(LC_FILE, dpi=DPI)
+plt.close()
+print(f"Saved: {LC_FILE}")
 
 mis_idx = np.where(np.array(y_pred) != np.array(y_test))[0]
 print(f"\nMisclassified: {len(mis_idx)} / {len(y_test)}")
