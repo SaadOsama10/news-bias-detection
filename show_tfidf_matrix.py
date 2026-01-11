@@ -4,7 +4,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 def main():
-    # 1) Load dataset
     csv_file = "guardian_text.csv"
     df = pd.read_csv(csv_file).dropna(subset=["text", "label"])
 
@@ -21,7 +20,6 @@ def main():
     sample["text"] = sample["text"].astype(str).str.slice(0, 120) + "..."
     print(sample.to_string(index=False))
 
-    # 2) Split
     X = df["text"].astype(str)
     y = df["label"].astype(str)
 
@@ -33,7 +31,6 @@ def main():
     print("Train size:", len(X_train))
     print("Test size :", len(X_test))
 
-    # 3) TF-IDF vectorization
     vectorizer = TfidfVectorizer(
         stop_words="english",
         max_features=5000,
@@ -49,7 +46,6 @@ def main():
     print("Matrix type:", type(X_train_vec))
     print("Note: It is a sparse matrix (most values are zero).")
 
-    # 4) Show numeric vector for ONE article
     feature_names = vectorizer.get_feature_names_out()
 
     first_vec = X_train_vec[0].toarray().ravel()  # convert 1xN sparse -> dense 1D
@@ -60,7 +56,6 @@ def main():
     print("\nFirst 20 feature names (corresponding dimensions):")
     print(feature_names[:20])
 
-    # 5) Make it super clear for presentation: show a mini table
     mini_df = pd.DataFrame({
         "feature": feature_names[:20],
         "tfidf_value": first_vec[:20]
@@ -69,7 +64,6 @@ def main():
     print("\n=== Mini view (first 20 dimensions) ===")
     print(mini_df.to_string(index=False))
 
-    # 6) Optional: show the most important features for that one article
     top_idx = np.argsort(first_vec)[::-1]
     top_idx = [i for i in top_idx if first_vec[i] > 0][:15]
 
@@ -77,7 +71,7 @@ def main():
     for i in top_idx:
         print(f"{feature_names[i]} : {first_vec[i]:.4f}")
 
-    print("\nDone ✅")
+    print("\nDone ")
 
 if __name__ == "__main__":
     main()
