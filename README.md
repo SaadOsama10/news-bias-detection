@@ -70,10 +70,12 @@ Numbers below are taken from the saved outputs in [`Jupyter Notebooks/`](Jupyter
 
 | Model | Test set | Accuracy | ROC-AUC |
 |---|---|---|---|
+| Linear SVM (TF-IDF, grid-searched) | 1,250 articles | **97.12%** | **0.995** |
 | Logistic Regression (TF-IDF) | 1,250 articles | **96.24%** | — |
+| Perceptron (TF-IDF) | 1,250 articles | **96.00%** | — |
 | 1D CNN | 1,000 articles | **0.94** | **0.984** |
 
-The Perceptron and Linear SVM notebooks were committed without saved outputs; run them to reproduce their scores (their plots are included below).
+The Linear SVM's best configuration was `C=1`, `max_features=5000`, `ngram_range=(1, 2)`, with a 5-fold CV macro-F1 of 0.977. The Perceptron and Linear SVM results come from re-running their notebooks with scikit-learn 1.9.1.
 
 <table>
   <tr>
