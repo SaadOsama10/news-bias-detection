@@ -1,3 +1,4 @@
+import os
 import re
 import time
 import random
@@ -5,6 +6,8 @@ import requests
 import pandas as pd
 
 API = "https://content.guardianapis.com/search"
+# Guardian Open Platform key; falls back to the public rate-limited "test" key.
+API_KEY = os.environ.get("GUARDIAN_API_KEY", "test")
 HEADERS = {"User-Agent": "Mozilla/5.0 (Academic Project)"}
 
 KEYWORDS = [
@@ -23,7 +26,7 @@ def contains_keywords(text):
 
 def fetch_page(section, page, page_size=200):
     params = {
-        "api-key": "test",
+        "api-key": API_KEY,
         "q": QUERY,
         "section": section,
         "page": page,
