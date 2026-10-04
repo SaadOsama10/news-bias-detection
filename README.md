@@ -95,7 +95,7 @@ The Linear SVM's best configuration was `C=1`, `max_features=5000`, `ngram_range
   </tr>
   <tr>
     <td><b>Linear SVM</b></td>
-    <td align="center">—</td>
+    <td><img src="Photos/SVM_ConfusionMatrix.png" width="260" alt="Linear SVM confusion matrix" /></td>
     <td><img src="Photos/SVM_roc_curve.png" width="260" alt="Linear SVM ROC curve" /></td>
     <td><img src="Photos/SVM_learning_curve.png" width="260" alt="Linear SVM learning curve" /></td>
   </tr>
