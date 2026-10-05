@@ -1,6 +1,8 @@
 # 📰 Bias Detection in News Articles
 
-**Classifying Guardian news articles on the Israel–Palestine conflict as _Biased_ or _Neutral_ with classic ML and a 1D CNN.**
+**Classifying Guardian articles on the Israel–Palestine conflict as opinion-style (_Biased_) or news-style (_Neutral_) writing with classic ML and a 1D CNN.**
+
+> "Biased" here means *opinion-style writing* (Guardian _Comment is free_) and "Neutral" means *news reporting* — the models detect writing **style**, not political truth or factual accuracy.
 
 <p align="center">
   <a href="https://saadosama10.github.io/news-bias-detection/demo/"><img src="https://img.shields.io/badge/%F0%9F%94%8D%20Try%20it%20live-Paste%20a%20text%2C%20get%20a%20verdict-3b5bdb?style=for-the-badge" alt="Try it live" height="52" /></a>
@@ -40,7 +42,7 @@ To rebuild the demo model: `python tools/export_model.py` (writes `docs/demo/mod
 
 ## Overview
 
-The project frames media-bias detection as a **binary text classification** task. Articles are collected from [The Guardian Open Platform](https://open-platform.theguardian.com/) and labelled by the section they were published in:
+The project frames media-bias detection as a **binary text classification** task, using opinion-vs-reporting style as a proxy for "biased" vs "neutral". Articles are collected from [The Guardian Open Platform](https://open-platform.theguardian.com/) and labelled by the section they were published in:
 
 | Label | Source sections |
 |---|---|
