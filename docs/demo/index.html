@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>News Bias Detector – live demo</title>
+<meta name="description" content="Paste a news text and see whether it reads like opinion (Biased) or reporting (Neutral). A TF-IDF + Linear SVM running entirely in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%237aa2f7'/%3E%3Cpath d='M9 10h14M9 16h14M9 22h8' stroke='%231a1b27' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f6f7fb;--surface:#fff;--text:#1b1d2a;--muted:#5d6278;--border:#dfe2ee;
+  --accent:#3b5bdb;--accent-ink:#fff;
+  --biased:#c2410c;--biased-bg:#ffedd5;--neutral:#0f766e;--neutral-bg:#ccfbf1;
+  --shadow:0 1px 2px rgba(20,24,50,.06),0 8px 24px rgba(20,24,50,.06);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12131c;--surface:#1a1b27;--text:#e6e8f5;--muted:#9aa0bd;--border:#2d3046;
+  --accent:#7aa2f7;--accent-ink:#12131c;
+  --biased:#fdba74;--biased-bg:#4a2410;--neutral:#5eead4;--neutral-bg:#0f3a36;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);}}
+:root[data-theme="dark"]{
+  --bg:#12131c;--surface:#1a1b27;--text:#e6e8f5;--muted:#9aa0bd;--border:#2d3046;
+  --accent:#7aa2f7;--accent-ink:#12131c;
+  --biased:#fdba74;--biased-bg:#4a2410;--neutral:#5eead4;--neutral-bg:#0f3a36;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:20px 16px 56px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+h1{font-size:1.5rem;line-height:1.2;margin:0}
+h2{font-size:1.15rem;margin:0 0 .5rem}
+.sub{color:var(--muted);margin:.25rem 0 1rem}
+a{color:var(--accent)}
+.icon-btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;padding:8px 12px;cursor:pointer;font:inherit;font-size:.9rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow);margin-top:16px}
+.note{border-left:4px solid var(--accent);background:var(--surface);border:1px solid var(--border);border-left-width:4px;border-radius:12px;padding:12px 14px;font-size:.92rem;color:var(--muted)}
+.note strong{color:var(--text)}
+textarea{width:100%;min-height:170px;resize:vertical;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit;line-height:1.5}
+textarea:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.row .grow{flex:1}
+button.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:11px 22px;font:inherit;font-weight:600;cursor:pointer}
+button.primary:disabled{opacity:.5;cursor:default}
+button.ghost{background:transparent;color:var(--text);border:1px solid var(--border);border-radius:999px;padding:6px 12px;font:inherit;font-size:.88rem;cursor:pointer}
+button.ghost:hover{border-color:var(--accent)}
+.label{font-size:.8rem;color:var(--muted);margin-right:2px}
+.hidden{display:none}
+.verdict{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 14px}
+.badge{font-weight:700;font-size:1.35rem;padding:4px 14px;border-radius:999px}
+.badge.Biased{background:var(--biased-bg);color:var(--biased)}
+.badge.Neutral{background:var(--neutral-bg);color:var(--neutral)}
+.conf-text{color:var(--muted)}
+.bar{height:12px;border-radius:999px;background:var(--bg);border:1px solid var(--border);overflow:hidden;margin:12px 0 4px;display:flex}
+.bar>i{display:block;height:100%;transition:width .4s}
+.bar .b{background:var(--biased)}.bar .n{background:var(--neutral)}
+.bar-legend{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+.warn{margin-top:12px;font-size:.9rem;color:var(--biased)}
+.marked{margin-top:14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg);white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto;line-height:1.75}
+mark{border-radius:4px;padding:1px 2px;color:inherit}
+mark.Biased{background:var(--biased-bg);box-shadow:inset 0 -2px 0 var(--biased)}
+mark.Neutral{background:var(--neutral-bg);box-shadow:inset 0 -2px 0 var(--neutral)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+@media (max-width:620px){.cols{grid-template-columns:1fr}}
+.cols h3{font-size:.95rem;margin:0 0 6px}
+.terms{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.terms li{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:8px;align-items:center;font-size:.92rem}
+.terms span.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.terms .m{height:8px;border-radius:99px;background:var(--bg);border:1px solid var(--border);overflow:hidden}
+.terms .m i{display:block;height:100%}
+.terms.Biased .m i{background:var(--biased)}.terms.Neutral .m i{background:var(--neutral)}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:.6rem 0;font-size:.9rem}
+.flow span{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:4px 9px}
+ul.how{margin:.4rem 0 0;padding-left:1.2rem}ul.how li{margin:.25rem 0}
+footer{margin-top:22px;color:var(--muted);font-size:.9rem;display:flex;flex-wrap:wrap;gap:6px 18px}
+.sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📰 News Bias Detector</h1>
+    <button class="icon-btn" id="theme" type="button" aria-label="Toggle light or dark theme">🌓 Theme</button>
+  </header>
+  <p class="sub">Paste a news text and see whether it reads like <b>opinion</b> (Biased) or <b>reporting</b> (Neutral). Runs entirely in your browser — nothing you type is sent anywhere.</p>
+
+  <div class="note" role="note">
+    <strong>What this does — and doesn't — measure.</strong> The model was trained on <em>The Guardian’s</em> Israel–Palestine coverage, where “Biased” means opinion-style writing (the <em>Comment is free</em> section) and “Neutral” means news-section reporting. It detects writing <strong>style</strong>, not political truth or factual accuracy, and it may be unreliable on other topics or outlets.
+  </div>
+
+  <section class="card" aria-labelledby="in-h">
+    <h2 id="in-h">Your text</h2>
+    <label class="sr" for="text">News text to analyze</label>
+    <textarea id="text" placeholder="Paste a news article or opinion piece here (50+ words works best)…"></textarea>
+    <div class="row">
+      <button class="primary" id="go" type="button" disabled>Analyze</button>
+      <button class="ghost" id="clear" type="button">Clear</button>
+      <span class="grow"></span>
+      <span class="conf-text" id="count" aria-live="polite"></span>
+    </div>
+    <div class="row" role="group" aria-label="Examples">
+      <span class="label">Try an example:</span>
+      <button class="ghost ex" type="button" data-ex="news1">Ceasefire talks (news)</button>
+      <button class="ghost ex" type="button" data-ex="op1">War &amp; conscience (opinion)</button>
+      <button class="ghost ex" type="button" data-ex="news2">Minimum wage (news)</button>
+      <button class="ghost ex" type="button" data-ex="op2">Honest leaders (opinion)</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="result" aria-live="polite" aria-labelledby="res-h">
+    <h2 id="res-h" class="sr">Result</h2>
+    <div class="verdict">
+      <span class="badge" id="badge"></span>
+      <span class="conf-text" id="conf"></span>
+    </div>
+    <div class="bar" role="img" id="barwrap"><i class="b" id="bar-b"></i><i class="n" id="bar-n"></i></div>
+    <div class="bar-legend"><span>Biased (opinion-style)</span><span>Neutral (news-style)</span></div>
+    <p class="warn hidden" id="warn"></p>
+    <h3 style="font-size:.95rem;margin:16px 0 0">Your text, with the words that pushed the decision</h3>
+    <div class="marked" id="marked"></div>
+    <div class="cols">
+      <div><h3 style="color:var(--biased)">Pushed toward Biased</h3><ul class="terms Biased" id="t-b"></ul></div>
+      <div><h3 style="color:var(--neutral)">Pushed toward Neutral</h3><ul class="terms Neutral" id="t-n"></ul></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it works</h2>
+    <div class="flow"><span>Your text</span>→<span>lowercase + tokenize</span>→<span>drop stop words</span>→<span>1–2-word terms</span>→<span>TF-IDF (5,000 terms)</span>→<span>Linear SVM</span>→<span>Platt scaling</span>→<span>Biased / Neutral</span></div>
+    <ul class="how">
+      <li>The classifier is a <b>TF-IDF + Linear SVM</b> trained on 3,750 Guardian articles and scored on 1,250 unseen ones: <b>97.12% test accuracy</b>, ROC-AUC 0.995.</li>
+      <li>Every term has a learned weight; the decision is the sum of <i>weight × TF-IDF value</i> over the words in your text. The highlighted words are the largest terms in that sum.</li>
+      <li>The percentage is a <b>calibrated probability</b> (Platt scaling fitted on held-out training scores), not a raw SVM score.</li>
+      <li>This page re-implements scikit-learn’s preprocessing and decision function in plain JavaScript. On all 1,250 test articles its predictions match the Python model (<a href="https://github.com/SaadOsama10/news-bias-detection/blob/main/tools/parity_test.py">parity test</a>).</li>
+      <li>Because the labels come from the newspaper section, a confident “Biased” means “reads like a Comment-is-free column”, not “is politically slanted”. Short or off-topic texts are less reliable.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <a href="https://github.com/SaadOsama10/news-bias-detection">⭐ Source on GitHub</a>
+    <span>By Saed O S Radi, Abdulrahman Zeineddin &amp; Abdelfatah Alhoot</span>
+    <span id="meta"></span>
+  </footer>
+</div>
+
+<script src="bias.js"></script>
+<script>
+const EXAMPLES = {
+  news1: "Officials said on Tuesday that talks over a ceasefire in Gaza would resume in Cairo this week, with mediators from Egypt and Qatar expected to attend. The Israeli government confirmed that a delegation would travel, while a Hamas spokesperson said the group was reviewing the latest proposal. According to the health ministry in Gaza, aid trucks entered the territory on Monday. The United Nations said distribution remained difficult. Talks are expected to last several days.",
+  op1: "I think it is time we stopped pretending that this war is anyone's idea of justice. Surely every politician who shrugs and says nothing can be done should be ashamed. We must demand an end to the killing, and we should refuse the lazy excuses we have heard for years. Frankly, the suffering of ordinary people is a moral failure, not a diplomatic inconvenience, and I believe history will judge those who looked away. Enough is enough.",
+  news2: "The prime minister announced on Wednesday that the government would raise the minimum wage by four percent from next April, following months of negotiations with unions and employers. The finance minister said the change would cost about two billion pounds a year. Business groups welcomed the decision but asked for support for small firms. Opposition members said the increase did not go far enough. A vote in parliament is scheduled for next month.",
+  op2: "I have never understood why we treat honest disagreement as betrayal. Our leaders talk endlessly about values, yet they bend whenever it is convenient. Surely the public deserves better than this cynical theatre. We need politicians with courage, who will say plainly what they believe and take the consequences. Anything less is a comfortable lie, and frankly, we should all be tired of being told to wait quietly."
+};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let model = null;
+
+// theme toggle (remembered if storage is available)
+const root = document.documentElement;
+try { const t = localStorage.getItem("theme"); if (t) root.dataset.theme = t; } catch (e) {}
+$("theme").onclick = () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+};
+
+function renderTerms(ul, items, max) {
+  ul.innerHTML = items.length ? "" : '<li class="conf-text">None found</li>';
+  for (const it of items) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="t" title="${esc(it.term)}">${esc(it.term)}</span><span class="m"><i style="width:${Math.max(6, 100 * Math.abs(it.contribution) / max)}%"></i></span>`;
+    ul.appendChild(li);
+  }
+}
+
+function analyze() {
+  const text = $("text").value;
+  if (!model || !text.trim()) return;
+  const r = model.analyze(text, { explain: true, top: 8 });
+  $("result").classList.remove("hidden");
+  const warn = $("warn");
+  if (r.empty) {
+    $("badge").className = "badge"; $("badge").textContent = "Not enough signal";
+    $("conf").textContent = "";
+    $("bar-b").style.width = $("bar-n").style.width = "0";
+    $("marked").textContent = text; $("t-b").innerHTML = $("t-n").innerHTML = "";
+    warn.textContent = "None of the words in this text are among the model’s 5,000 known terms (it is trained on English news about the Israel–Palestine conflict), so it cannot decide.";
+    warn.classList.remove("hidden");
+    return;
+  }
+  $("badge").className = "badge " + r.label;
+  $("badge").textContent = r.label;
+  $("conf").textContent = `${(r.probability * 100).toFixed(0)}% confidence (${r.label === "Neutral" ? "news-style" : "opinion-style"})`;
+  $("bar-n").style.width = (r.pNeutral * 100).toFixed(1) + "%";
+  $("bar-b").style.width = ((1 - r.pNeutral) * 100).toFixed(1) + "%";
+  $("barwrap").setAttribute("aria-label", `Probability Biased ${((1 - r.pNeutral) * 100).toFixed(0)}%, Neutral ${(r.pNeutral * 100).toFixed(0)}%`);
+  const notes = [];
+  if (r.wordCount < 40) notes.push("This text is short; the model was trained on articles of 60+ words, so treat the result with extra caution.");
+  if (r.probability < 0.65) notes.push("The model is close to undecided here.");
+  warn.textContent = notes.join(" "); warn.classList.toggle("hidden", !notes.length);
+
+  let html = "", pos = 0;
+  for (const s of r.spans) {
+    html += esc(text.slice(pos, s.start)) + `<mark class="${s.cls}">${esc(text.slice(s.start, s.end))}</mark>`;
+    pos = s.end;
+  }
+  $("marked").innerHTML = html + esc(text.slice(pos));
+  const all = [].concat(r.toward.Biased, r.toward.Neutral);
+  const max = Math.max(...all.map((c) => Math.abs(c.contribution)), 1e-9);
+  renderTerms($("t-b"), r.toward.Biased, max);
+  renderTerms($("t-n"), r.toward.Neutral, max);
+}
+
+const updateCount = () => {
+  const n = model ? model.tokenize($("text").value).length : 0;
+  $("count").textContent = n ? n + " words" : "";
+};
+$("text").addEventListener("input", updateCount);
+$("go").onclick = analyze;
+$("clear").onclick = () => { $("text").value = ""; $("result").classList.add("hidden"); updateCount(); $("text").focus(); };
+document.querySelectorAll(".ex").forEach((b) => b.onclick = () => { $("text").value = EXAMPLES[b.dataset.ex]; updateCount(); analyze(); });
+$("text").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) analyze(); });
+
+BiasModel.load("model.json").then((m) => {
+  model = m; $("go").disabled = false; updateCount();
+  $("meta").textContent = `Model: ${m.data.terms.length.toLocaleString()} terms · ${(m.data.meta.test_accuracy * 100).toFixed(2)}% test accuracy`;
+}).catch((e) => { $("conf").textContent = ""; $("count").textContent = "Could not load the model: " + e.message; });
+</script>
+</body>
+</html>
