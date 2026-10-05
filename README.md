@@ -2,6 +2,14 @@
 
 **Classifying Guardian news articles on the Israel–Palestine conflict as _Biased_ or _Neutral_ with classic ML and a 1D CNN.**
 
+<p align="center">
+  <a href="https://saadosama10.github.io/news-bias-detection/demo/"><img src="https://img.shields.io/badge/%F0%9F%94%8D%20Try%20it%20live-Paste%20a%20text%2C%20get%20a%20verdict-3b5bdb?style=for-the-badge" alt="Try it live" height="52" /></a>
+</p>
+
+<p align="center">
+  <a href="https://saadosama10.github.io/news-bias-detection/demo/"><img src="docs/demo/screenshot.png" width="760" alt="Screenshot of the live demo: verdict, confidence bar and highlighted contributing words" /></a>
+</p>
+
 <p>
   <img src="https://img.shields.io/badge/Python-1a1b27?style=flat-square&logo=python&logoColor=7aa2f7" alt="Python" />
   <img src="https://img.shields.io/badge/scikit--learn-1a1b27?style=flat-square&logo=scikitlearn&logoColor=7aa2f7" alt="scikit-learn" />
@@ -16,6 +24,19 @@
 👥 **Team:** Saed O S Radi, Abdulrahman Zeineddin, Abdelfatah Alhoot — original repository: [ABDULRAHMANszn/Bias_Detection_in_News](https://github.com/ABDULRAHMANszn/Bias_Detection_in_News)
 
 ---
+
+## 🔍 Live demo
+
+**<https://saadosama10.github.io/news-bias-detection/demo/>** — paste a text and get *Biased* / *Neutral*, a calibrated confidence, and the words and phrases that pushed the decision (highlighted in your text). It runs **entirely in your browser** on GitHub Pages: no server, no account, nothing you paste leaves your machine.
+
+- **Same model as the results below:** TF-IDF (5,000 features, uni+bigrams, English stop words) → Linear SVM (`C=1`). Retraining reproduces the reported **97.12%** test accuracy and ROC-AUC 0.995 (`tools/export_model.py`).
+- **Confidence is calibrated:** Platt scaling fitted on out-of-fold training scores, not a raw SVM margin.
+- **Explainable:** each term's contribution is `weight × TF-IDF value`; the largest ones are listed and highlighted.
+- **Python ↔ JavaScript parity:** the browser re-implements scikit-learn's tokenizer, stop-word filtering, n-grams, TF-IDF and decision function in plain JS (`docs/demo/bias.js`). On the full 1,250-article test set, **JS and Python agree on 1,250 / 1,250 predictions (100.00%)**, max score difference 1.4e-5 (`python tools/parity_test.py`).
+
+> ⚠️ **What the demo measures — and doesn't.** The model was trained on *The Guardian's* Israel–Palestine coverage, where "Biased" means **opinion-style writing** (the *Comment is free* section) and "Neutral" means **news-section reporting**. It detects writing **style**, not political truth or factual accuracy, and it may be unreliable on other topics or outlets. A confident "Biased" means "reads like an opinion column", not "is politically slanted".
+
+To rebuild the demo model: `python tools/export_model.py` (writes `docs/demo/model.json`, ~46 kB gzipped), then `python tools/parity_test.py` (needs Node ≥ 18).
 
 ## Overview
 
@@ -132,6 +153,8 @@ The Linear SVM's best configuration was `C=1`, `max_features=5000`, `ngram_range
 ├── linear_svm_model.py       # TF-IDF + Linear SVM with grid search
 ├── cnn_text_model.py         # 1D CNN (script version)
 ├── guardian_text.csv         # Main dataset (5,000 articles, ~42 MB)
+├── docs/demo/                # Live demo (GitHub Pages): index.html, bias.js, model.json
+├── tools/                    # export_model.py (train + export), parity_test.py (Python vs JS)
 ├── Jupyter Notebooks/        # Notebook versions with saved outputs
 ├── Photos/                   # Confusion matrices, ROC and learning curves
 ├── requirements.txt
@@ -141,7 +164,7 @@ The Linear SVM's best configuration was `C=1`, `max_features=5000`, `ngram_range
 ## Data / Models
 
 - **`guardian_text.csv` is included** (5,000 rows, columns `text, label`). It is the input for the three TF-IDF models, `show_tfidf_matrix.py` and the CNN notebook. To rebuild it from scratch, run `python data_loader.py` (see below).
-- **No trained models are stored** — every script trains from scratch.
+- **No trained models are stored for the scripts** — every script trains from scratch. The only exported model is `docs/demo/model.json`, the Linear SVM serialised for the browser demo.
 - **Two intermediate CSVs are not in the working tree**, but they are preserved in the git history (removed in commit `2f68e94`):
   - `guardian_israel_palestine_balanced_2000.csv` — an earlier 2,000-article dataset (`url, section, title, text, label`), the input of `data_prossing.py`
   - `guardian_palestine_preprocessed.csv` — the output of `data_prossing.py` (`processed_text, label`), the input of `cnn_text_model.py`
