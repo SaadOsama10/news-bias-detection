@@ -189,7 +189,7 @@ function analyze() {
   }
   $("badge").className = "badge " + r.label;
   $("badge").textContent = r.label;
-  $("conf").textContent = `${(r.probability * 100).toFixed(0)}% confidence (${r.label === "Neutral" ? "news-style" : "opinion-style"})`;
+  $("conf").textContent = `${r.probability >= 0.995 ? ">99" : (r.probability * 100).toFixed(0)}% confidence (${r.label === "Neutral" ? "news-style" : "opinion-style"})`;
   $("bar-n").style.width = (r.pNeutral * 100).toFixed(1) + "%";
   $("bar-b").style.width = ((1 - r.pNeutral) * 100).toFixed(1) + "%";
   $("barwrap").setAttribute("aria-label", `Probability Biased ${((1 - r.pNeutral) * 100).toFixed(0)}%, Neutral ${(r.pNeutral * 100).toFixed(0)}%`);
